@@ -657,6 +657,22 @@ describe('(save flag)', function () {
             .fin(done);
         }, TIMEOUT);
 
+        it('spec.23.3 should fetch with PLUGINNAME@SPEC when install plugin with incorrect spec', function (done) {
+            var incorrectSpec = '~';
+            redirectRegistryCalls(pluginName2 + '@' + incorrectSpec);
+            helpers.setEngineSpec(appPath, platformName, platformLocalPathNewer);
+            helpers.setPluginSpec(appPath, pluginName2, incorrectSpec);
+            prepare()
+            .then(function () {
+                expect(registry.fetch).toHaveBeenCalledWith([pluginName2 + '@' + incorrectSpec]);
+                expect(path.join(appPath, 'plugins', pluginName2)).not.toExist();
+            }).catch(function (err) {
+                expect(true).toBe(false);
+                console.log(err.message);
+            })
+            .fin(done);
+        }, TIMEOUT);
+
         it('spec.24 should restore only specified platform', function (done) {
             helpers.setEngineSpec(appPath, platformName, platformLocalPathNewer);
             helpers.setEngineSpec(appPath, otherPlatformName, otherPlatformSpec);
