@@ -34,7 +34,6 @@
 var fs   = require('fs'),
     path = require('path'),
     et   = require('elementtree'),
-    semver = require('semver'),
     events = require('../events'),
     ConfigKeeper = require('./ConfigKeeper'),
     CordovaLogger = require('../CordovaLogger');
@@ -103,7 +102,8 @@ function remove_plugin_changes(pluginInfo, is_top_level) {
     }
 
     // get config munge, aka how did this plugin change various config files
-    var config_munge = self.generate_plugin_config_munge(pluginInfo, plugin_vars, edit_config_changes);
+    var changes = pluginInfo.getConfigFiles(self.platform);
+    var config_munge = self.generate_plugin_config_munge(changes, pluginInfo.id, plugin_vars, edit_config_changes);
     // global munge looks at all plugins' changes to config files
     var global_munge = platform_config.config_munge;
     var munge = mungeutil.decrement_munge(global_munge, config_munge);
@@ -141,10 +141,10 @@ function add_plugin_changes(pluginInfo, plugin_vars, is_top_level, should_increm
     }
 
     var config_munge;
-
+    var changes = pluginInfo.getConfigFiles(self.platform);
     if (!edit_config_changes || edit_config_changes.length === 0) {
         // get config munge, aka how should this plugin change various config files
-        config_munge = self.generate_plugin_config_munge(pluginInfo, plugin_vars);
+        config_munge = self.generate_plugin_config_munge(changes, pluginInfo.id, plugin_vars);
     }
     else {
         var isConflictingInfo = is_conflicting(edit_config_changes, platform_config.config_munge, self, plugin_force);
@@ -158,7 +158,7 @@ function add_plugin_changes(pluginInfo, plugin_vars, is_top_level, should_increm
             }
 
             // force add new munges
-            config_munge = self.generate_plugin_config_munge(pluginInfo, plugin_vars, edit_config_changes);
+            config_munge = self.generate_plugin_config_munge(changes, pluginInfo.id, plugin_vars, edit_config_changes);
         }
         else if(isConflictingInfo.conflictFound) {
             throw new Error('There was a conflict trying to modify attributes with <edit-config> in plugin ' + pluginInfo.id +
@@ -167,7 +167,7 @@ function add_plugin_changes(pluginInfo, plugin_vars, is_top_level, should_increm
         }
         else {
             // no conflicts, will handle edit-config
-            config_munge = self.generate_plugin_config_munge(pluginInfo, plugin_vars, edit_config_changes);
+            config_munge = self.generate_plugin_config_munge(changes, pluginInfo.id, plugin_vars, edit_config_changes);
         }
     }
     // global munge looks at all plugins' changes to config files
@@ -225,12 +225,10 @@ function reapply_global_munge () {
 // generate_plugin_config_munge
 // Generate the munge object from plugin.xml + vars
 PlatformMunger.prototype.generate_plugin_config_munge = generate_plugin_config_munge;
-function generate_plugin_config_munge(pluginInfo, vars, edit_config_changes) {
-    var self = this;
+function generate_plugin_config_munge(changes, plugin_id, vars, edit_config_changes) {
 
     vars = vars || {};
     var munge = { files: {} };
-    var changes = pluginInfo.getConfigFiles(self.platform);
 
     if(edit_config_changes) {
         Array.prototype.push.apply(changes, edit_config_changes);
@@ -249,13 +247,16 @@ function generate_plugin_config_munge(pluginInfo, vars, edit_config_changes) {
             }
             // 2. add into munge
             if (change.mode) {
-                mungeutil.deep_add(munge, change.file, change.target, { xml: stringified, count: 1, mode: change.mode, plugin: pluginInfo.id });
+                if (change.mode !== 'remove') {
+                    mungeutil.deep_add(munge, change.file, change.target, { xml: stringified, count: 1, mode: change.mode, plugin: plugin_id });
+                }
             }
             else {
                 mungeutil.deep_add(munge, change.target, change.parent, { xml: stringified, count: 1, after: change.after });
             }
         });
     });
+
     return munge;
 }
 
