@@ -328,7 +328,6 @@ function generate_plugin_config_munge(changes, vars, edit_config_changes) {
 
     vars = vars || {};
     var munge = { files: {} };
-    var changes = pluginInfo.getConfigFiles(self.platform);
 
     if(edit_config_changes) {
         Array.prototype.push.apply(changes, edit_config_changes);
