@@ -39,12 +39,10 @@ var configChanges = require('../../src/ConfigChanges/ConfigChanges'),
     android_two_project = path.join(__dirname, '../fixtures/projects/android_two/*'),
     android_two_no_perms_project = path.join(__dirname, '../fixtures/projects/android_two_no_perms', '*'),
     ios_config_xml = path.join(__dirname, '../fixtures/projects/ios-config-xml/*'),
-    windows_testapp_jsproj = path.join(__dirname, '../fixtures/projects/windows/TestApp.jsproj'),
     plugins_dir = path.join(temp, 'cordova', 'plugins');
 var mungeutil = require('../../src/ConfigChanges/munge-util');
 var PlatformJson = require('../../src/PlatformJson');
 var PluginInfoProvider = require('../../src/PluginInfo/PluginInfoProvider');
-var PluginInfo = require('../../src/PluginInfo/PluginInfo');
 
 // TODO: dont do fs so much
 
@@ -134,7 +132,7 @@ describe('config-changes module', function() {
                 var xml;
                 var dummy_xml = new et.ElementTree(et.XML(fs.readFileSync(path.join(dummyplugin, 'plugin.xml'), 'utf-8')));
                 var munger = new configChanges.PlatformMunger('android', temp, 'unused', null, pluginInfoProvider);
-                var changes = pluginInfoProvider.get(dummyplugin).getConfigFiles("android");
+                var changes = pluginInfoProvider.get(dummyplugin).getConfigFiles('android');
                 var munge = munger.generate_plugin_config_munge(changes, {});
                 expect(munge.files['AndroidManifest.xml']).toBeDefined();
                 expect(munge.files['AndroidManifest.xml'].parents['/manifest/application']).toBeDefined();
@@ -154,7 +152,7 @@ describe('config-changes module', function() {
             });
             it('should split out multiple children of config-file elements into individual leaves', function() {
                 var munger = new configChanges.PlatformMunger('android', temp, 'unused', null, pluginInfoProvider);
-                var changes = pluginInfoProvider.get(childrenplugin).getConfigFiles("android");
+                var changes = pluginInfoProvider.get(childrenplugin).getConfigFiles('android');
                 var munge = munger.generate_plugin_config_munge(changes, {PACKAGE_NAME: 'com.alunny.childapp'});
                 expect(munge.files['AndroidManifest.xml']).toBeDefined();
                 expect(munge.files['AndroidManifest.xml'].parents['/manifest']).toBeDefined();
@@ -170,63 +168,31 @@ describe('config-changes module', function() {
             });
             it('should not use xml comments as config munge leaves', function() {
                 var munger = new configChanges.PlatformMunger('android', temp, 'unused', null, pluginInfoProvider);
-                var changes = pluginInfoProvider.get(childrenplugin).getConfigFiles("android");
+                var changes = pluginInfoProvider.get(childrenplugin).getConfigFiles('android');
                 var munge = munger.generate_plugin_config_munge(changes, {});
                 expect(get_munge_change(munge, 'AndroidManifest.xml', '/manifest', '<!--library-->')).not.toBeDefined();
                 expect(get_munge_change(munge, 'AndroidManifest.xml', '/manifest', '<!-- GCM connects to Google Services. -->')).not.toBeDefined();
             });
             it('should increment config hierarchy leaves if different config-file elements target the same file + selector + xml', function() {
                 var munger = new configChanges.PlatformMunger('android', temp, 'unused', null, pluginInfoProvider);
-                var changes = pluginInfoProvider.get(configplugin).getConfigFiles("android");
+                var changes = pluginInfoProvider.get(configplugin).getConfigFiles('android');
                 var munge = munger.generate_plugin_config_munge(changes, {});
                 expect(get_munge_change(munge, 'res/xml/config.xml', '/widget', '<poop />').count).toEqual(2);
             });
             it('should take into account interpolation variables', function() {
                 var munger = new configChanges.PlatformMunger('android', temp, 'unused', null, pluginInfoProvider);
-                var changes = pluginInfoProvider.get(childrenplugin).getConfigFiles("android");
+                var changes = pluginInfoProvider.get(childrenplugin).getConfigFiles('android');
                 var munge = munger.generate_plugin_config_munge(changes, {PACKAGE_NAME:'ca.filmaj.plugins'});
                 expect(get_munge_change(munge, 'AndroidManifest.xml', '/manifest', '<uses-permission android:name="ca.filmaj.plugins.permission.C2D_MESSAGE" />')).toBeDefined();
             });
             it('should create munges for platform-agnostic config.xml changes', function() {
                 var munger = new configChanges.PlatformMunger('android', temp, 'unused', null, pluginInfoProvider);
-                var changes = pluginInfoProvider.get(dummyplugin).getConfigFiles("android");
+                var changes = pluginInfoProvider.get(dummyplugin).getConfigFiles('android');
                 var munge = munger.generate_plugin_config_munge(changes, {});
                 expect(get_munge_change(munge, 'config.xml', '/*', '<access origin="build.phonegap.com" />')).toBeDefined();
                 expect(get_munge_change(munge, 'config.xml', '/*', '<access origin="s3.amazonaws.com" />')).toBeDefined();
             });
         });
-
-        /*describe('for windows project', function() {
-            beforeEach(function() {
-                shell.cp('-rf', windows_testapp_jsproj, temp);
-            });
-            it('should special case config-file elements for windows', function() {
-                var munger = new configChanges.PlatformMunger('windows', temp, 'unused', null, pluginInfoProvider);
-
-                var munge = munger.generate_plugin_config_munge(pluginInfoProvider.get(configplugin), {});
-                var packageAppxManifest = munge.files['package.appxmanifest'];
-                var windows81AppxManifest = munge.files['package.windows.appxmanifest'];
-                var winphone81AppxManifest = munge.files['package.phone.appxmanifest'];
-                var windows10AppxManifest = munge.files['package.windows10.appxmanifest'];
-
-                expect(packageAppxManifest.parents['/Parent/Capabilities'][0].xml).toBe('<Capability Note="should-exist-for-all-appxmanifest-target-files" />');
-
-                // 1 comes from versions="=8.1.0" + 1 from versions="=8.1.0" device-target="windows"
-                expect(windows81AppxManifest.parents['/Parent/Capabilities'][0].xml).toBe('<Capability Note="should-exist-for-win81-win-and-phone" />');
-                expect(windows81AppxManifest.parents['/Parent/Capabilities'][0].count).toBe(2);
-                expect(windows81AppxManifest.parents['/Parent/Capabilities'][1].xml).toBe('<Capability Note="should-exist-for-win81-win-only" />');
-                expect(windows81AppxManifest.parents['/Parent/Capabilities'][2].xml).toBe('<Capability Note="should-exist-for-win10-and-win81-win-and-phone" />');
-
-                // 1 comes from versions="=8.1.0" + 1 from versions="=8.1.0" device-target="phone"
-                expect(winphone81AppxManifest.parents['/Parent/Capabilities'][0].xml).toBe('<Capability Note="should-exist-for-win81-win-and-phone" />');
-                expect(winphone81AppxManifest.parents['/Parent/Capabilities'][0].count).toBe(2);
-                expect(winphone81AppxManifest.parents['/Parent/Capabilities'][1].xml).toBe('<Capability Note="should-exist-for-win81-phone-only" />');
-                expect(winphone81AppxManifest.parents['/Parent/Capabilities'][2].xml).toBe('<Capability Note="should-exist-for-win10-and-win81-win-and-phone" />');
-
-                expect(windows10AppxManifest.parents['/Parent/Capabilities'][0].xml).toBe('<Capability Note="should-exist-for-win10-and-win81-win-and-phone" />');
-                expect(windows10AppxManifest.parents['/Parent/Capabilities'][1].xml).toBe('<Capability Note="should-exist-in-win10-only" />');
-            });
-        });*/
     });
 
     describe('processing of plugins (via process method)', function() {
@@ -344,7 +310,7 @@ describe('config-changes module', function() {
                     platformJson.addInstalledPluginToPrepareQueue('org.test.editconfigtest_two', {});
 
                     var munger = new configChanges.PlatformMunger('android', temp, platformJson, pluginInfoProvider);
-                    expect(function() {munger.process(plugins_dir);}).toThrow(new Error('There was a conflict trying to modify attributes with <edit-config> in plugin org.test.editconfigtest_two. The conflicting plugin, org.test.editconfigtest, already modified the same attributes. The conflict must be resolved before org.test.editconfigtest_two can be added. You may use --force to add the plugin and overwrite the conflicting attributes.'));
+                    expect(function() {munger.process(plugins_dir);}).toThrow(new Error('There was a conflict trying to modify attributes with <edit-config> in plugin org.test.editconfigtest_two. The conflicting plugin, org.test.editconfigtest_two, already modified the same attributes. The conflict must be resolved before org.test.editconfigtest_two can be added. You may use --force to add the plugin and overwrite the conflicting attributes.'));
                 });
             });
             describe('of plist config files', function() {

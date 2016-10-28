@@ -203,7 +203,7 @@ describe('plugin end-to-end', function() {
         .fin(done);
     });
 
-    it('should respect preference default values', function (done) {    
+    it('should respect preference default values', function (done) {
        addPlugin(path.join(pluginsDir, org_test_defaultvariables), org_test_defaultvariables, {cli_variables: { REQUIRED:'NO', REQUIRED_ANDROID:'NO'}}, done)
        .then(function() {
             var platformJsonPath = path.join(project, 'plugins', helpers.testPlatform + '.json');

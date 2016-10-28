@@ -266,7 +266,6 @@ describe('platform add and remove --fetch', function () {
     });
 
     it('should add and remove platform from node_modules directory', function(done) {
-
         cordova.raw.create('helloFetch')
         .then(function() {
             process.chdir(project);

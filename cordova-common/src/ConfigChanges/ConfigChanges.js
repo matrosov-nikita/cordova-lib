@@ -34,7 +34,6 @@
 var fs   = require('fs'),
     path = require('path'),
     et   = require('elementtree'),
-    semver = require('semver'),
     events = require('../events'),
     ConfigKeeper = require('./ConfigKeeper'),
     CordovaLogger = require('../CordovaLogger');
@@ -148,7 +147,7 @@ function add_plugin_changes(pluginInfo, plugin_vars, is_top_level, should_increm
         config_munge = self.generate_plugin_config_munge(changes, plugin_vars);
     }
     else {
-        var isConflictingInfo = is_conflicting(edit_config_changes, platform_config.config_munge, self, plugin_force);
+        var isConflictingInfo = is_conflicting(edit_config_changes, platform_config.config_munge, self, plugin_force, pluginInfo.id);
 
         if (isConflictingInfo.conflictWithConfigxml) {
             throw new Error(pluginInfo.id +
@@ -324,7 +323,6 @@ function generate_config_xml_munge(config, edit_config_changes, type) {
 // Generate the munge object from plugin.xml + vars
 PlatformMunger.prototype.generate_plugin_config_munge = generate_plugin_config_munge;
 function generate_plugin_config_munge(changes, vars, edit_config_changes) {
-    var self = this;
 
     vars = vars || {};
     var munge = { files: {} };
@@ -358,7 +356,7 @@ function generate_plugin_config_munge(changes, vars, edit_config_changes) {
     return munge;
 }
 
-function is_conflicting(editchanges, config_munge, self, force) {
+function is_conflicting(editchanges, config_munge, self, force, plugin_id) {
     var files = config_munge.files;
     var conflictFound = false;
     var conflictWithConfigxml = false;
@@ -420,7 +418,7 @@ function is_conflicting(editchanges, config_munge, self, force) {
                     }
                     else {
                         // plugin cannot overwrite other plugin changes without --force
-                        conflictingPlugin = target[0].plugin;
+                        conflictingPlugin = plugin_id;
                         return;
                     }
                 }
