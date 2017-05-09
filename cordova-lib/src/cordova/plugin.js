@@ -389,6 +389,8 @@ function determinePluginTarget(projectRoot, cfg, target, fetchOptions) {
     if (parsedSpec.version || cordova_util.isUrl(id) || cordova_util.isDirectory(maybeDir)) {
         return Q(target);
     }
+
+    var cordovaVersion = pkgJson.version;
     // Require project pkgJson.
     var pkgJsonPath = path.join(projectRoot, 'package.json');
     if(fs.existsSync(pkgJsonPath)) {
@@ -457,7 +459,7 @@ function determinePluginTarget(projectRoot, cfg, target, fetchOptions) {
 
     return (shouldUseNpmInfo ? registry.info([id])
     .then(function(pluginInfo) {
-        return getFetchVersion(projectRoot, pluginInfo, pkgJson.version);
+        return getFetchVersion(projectRoot, pluginInfo, cordovaVersion);
     }) : Q(null))
     .then(function(fetchVersion) {
         return fetchVersion ? (id + '@' + fetchVersion) : target;
