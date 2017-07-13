@@ -46,7 +46,11 @@ module.exports = function run(options) {
             return Q.all(options.platforms.map(function(platform) {
 
                 var buildPromise = options.options.nobuild ? Q() :
-                    platform_lib.getPlatformApi(platform).build(options.options);
+                    Q.fcall(function() {
+                        return hooksRunner.fire('before_build', options);
+                    }).then(function() {
+                        return platform_lib.getPlatformApi(platform).build(options.options);
+                    });
 
                 return buildPromise
                 .then(function() {
